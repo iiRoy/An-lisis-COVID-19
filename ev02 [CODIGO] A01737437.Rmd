@@ -1,0 +1,311 @@
+---
+title: "Variantes SARS-Cov-2"
+author: "Rodrigo López Guerra"
+date: "2023-05-01"
+output: 
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+SETUP
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+LIBRERÍAS
+```{r}
+library(stringr)
+library(Biostrings)
+library(seqinr)
+library(adegenet)
+library(ape)
+library(ggtree)
+library(DECIPHER)
+library(viridis)
+library(ggplot2)
+library(dplyr)
+library(purrr)
+```
+
+DOCUMENTACIÓN -> https://www.ncbi.nlm.nih.gov/activ?lineage=B-1-1-7
+```{r}
+ALPHA<-read.fasta("alpha.fasta")
+A_seq<-ALPHA[[1]]
+
+BETA<-read.fasta("beta.fasta")
+B_seq<-BETA[[1]]
+
+DELTA<-read.fasta("delta.fasta")
+D_seq<-DELTA[[1]]
+
+EPSILON<-read.fasta("epsilon.fasta")
+EP_seq<-EPSILON[[1]]
+
+ETA<-read.fasta("eta.fasta")
+E_seq<-ETA[[1]]
+
+KAPPA<-read.fasta("kappa.fasta")
+K_seq<-KAPPA[[1]]
+
+MU<-read.fasta("mu.fasta")
+M_seq<-MU[[1]]
+
+OMICRON<-read.fasta("omicron.fasta")
+O_seq<-OMICRON[[1]]
+
+TAU<-read.fasta("tau.fasta")
+T_seq<-TAU[[1]]
+
+ZETA<-read.fasta("zeta.fasta")
+Z_seq<-ZETA[[1]]
+```
+
+FUNCIONES
+```{r}
+get_length <- function(seq) {
+  cat("\n\x1B[3mLongitud de la Secuencia:\x1B[0m\n",
+  length(seq))
+}
+
+tablas <- function(..............................) {
+  df <- round(prop.table(table(..............................))*100, 2)
+}
+
+percentage <- function(seq) {
+  cat("\n\n\x1B[3mPorcentaje de Nucleótidos en la Secuencia:\x1B[0m\n")
+  print(tablas(seq))
+  cat("..............................\n")
+}
+
+porcentajeGC <- function(seq){
+  seqPorcentaje = (GC(seq))*100
+  cat("\n\x1B[3mPorcentaje de GC en la Secuencia:\x1B[0m\n",
+  seqPorcentaje)
+}
+
+contrasentido <- function(seq)
+{
+  x=1
+  n=20
+  m=head(seq,n=20)
+  o=tail(seq,n=20)
+  cat("\n\n\x1B[3mSecuencia con los primeros y últimos 20 nucleótidos:\n\x1B[0m\n\x1B[4mSecuencia Original:\x1B[0m\n ")
+  while(x!=21){
+    cat(m[x]," ")
+    x=x+1
+  }
+  cat("\n\n\x1B[4mSecuencia Contrasentido:\x1B[0m\n ")
+  while(n!=0){
+    cat(o[n]," ")
+    n=n-1
+  }
+  cat("\n\n\n")
+}
+```
+
+PRESENTACIÓN DATOS
+```{r}
+DatosAlumno <- function()
+{
+  cat("\014\033[1mDatos del proyecto\033[0m\n\n\t\033[1mDocente:\033[0m Raquel Acuña González.\n\t\033[1mMateria:\033[0m Análisis de Biología Computacional.\n\t\033[1mSituación Problema:\033[0m Virus SARS-CoV-2: un análisis profundo.\n\n\t\033[1mAlumno:\033[0m Rodrigo López Guerra.\n\t\033[1mMatrícula:\033[0m A01737437.\n\t\033[1mCampus:\033[0m Puebla.\n")
+}
+
+DataGraph <- function()
+{
+  virus <- c("OQ551287", "OQ551304", "OQ892531", "OQ896567", "OQ929658","OQ898508","OQ551280","OQ756730","OQ896552","OQ896554","OQ204216","OP599869","OQ551292","OQ551293","OQ928438","OQ928439","OQ921569","OQ852543","OQ817356","OQ755422")
+  
+  virus_sequences <- read.GenBank(virus)
+  
+  str(virus_sequences)
+  
+  attributes(virus_sequences)
+  names(virus_sequences)[1]=("ALPHA:_SEC-0098T_(COL)")
+  names(virus_sequences)[2]=("ALPHA:_SEC-0132B_(COL)")
+  names(virus_sequences)[3]=("BETA:_FL-BPHL-21440_(USA)")
+  names(virus_sequences)[4]=("BETA:_IHUCOVID-003990_(FRA)")
+  names(virus_sequences)[5]=("DELTA:_B012689_(USA)")
+  names(virus_sequences)[6]=("DELTA:_IHUCOVID-048209_(FRA)")
+  names(virus_sequences)[7]=("EPSILON:_SEC-0088J_(COL)")
+  names(virus_sequences)[8]=("EPSILON:_NE-NCOV21-19722_(USA)")
+  names(virus_sequences)[9]=("ETA:_IHUCOVID-004913_(FRA)")
+  names(virus_sequences)[10]=("ETA:_IHUCOVID-008798_(FRA)")
+  names(virus_sequences)[11]=("KAPPA:_WI-UW-4291_(USA)")
+  names(virus_sequences)[12]=("KAPPA:_7003_(IND)")
+  names(virus_sequences)[13]=("MU:_SEC-0108D_(COL)")
+  names(virus_sequences)[14]=("MU:_SEC-0109E_(COL)")
+  names(virus_sequences)[15]=("OMICRON:_FL-BPHL-16285_(USA)")
+  names(virus_sequences)[16]=("OMICRON:_FL-BPHL-16286_(USA)")
+  names(virus_sequences)[17]=("TAU:_MT-UMGC-05881_(USA)")
+  names(virus_sequences)[18]=("TAU:_NGS-900_(IND)")
+  names(virus_sequences)[19]=("ZETA:_WY-UNM-21093497_(USA)")
+  names(virus_sequences)[20]=("ZETA:_NE-NCOV21-24251_(USA)")
+  names(virus_sequences)
+  
+  write.dna(virus_sequences,  file ="virus_seqs.fasta", format = "fasta", append =
+FALSE, nbcol = 6, colsep = " ", colw = 10)
+  
+  virus_seq_no_alineadas <- readDNAStringSet("virus_seqs.fasta", format = "fasta")
+  virus_seq_no_alineadas
+  
+  virus_seq_no_alineadas <- OrientNucleotides(virus_seq_no_alineadas)
+  virus_align_seqs <- AlignSeqs(virus_seq_no_alineadas)
+  
+  BrowseSeqs(virus_align_seqs, highlight=0)
+  writeXStringSet(virus_align_seqs, file = "virus_align_seq.fasta")
+  virus_aligned <- read.alignment("virus_align_seq.fasta", format = "fasta") 
+  virus_aligned
+  
+  
+}
+
+VirusData <- function()
+{
+cat('\n\033[1m Análisis de Variantes del SARS-CoV-2 \033[0m\n\n')
+  
+cat('\033[1m 1.- SARS-CoV-2 VARIANTE: ALPHA: \033[0m\n')
+get_length(A_seq)
+percentage(A_seq)
+porcentajeGC(A_seq)
+contrasentido(A_seq)
+
+cat('\033[1m 2.- SARS-CoV-2 VARIANTE: BETA: \033[0m\n')
+get_length(B_seq)
+percentage(B_seq)
+porcentajeGC(B_seq)
+contrasentido(B_seq)
+
+cat('\033[1m 3.- SARS-CoV-2 VARIANTE: DELTA: \033[0m\n')
+get_length(D_seq)
+percentage(D_seq)
+porcentajeGC(D_seq)
+contrasentido(D_seq)
+
+cat('\033[1m 4.- SARS-CoV-2 VARIANTE: EPSILON: \033[0m\n')
+get_length(EP_seq)
+percentage(EP_seq)
+porcentajeGC(EP_seq)
+contrasentido(EP_seq)
+
+cat('\033[1m 5.- SARS-CoV-2 VARIANTE: ETA: \033[0m\n')
+get_length(E_seq)
+percentage(E_seq)
+porcentajeGC(E_seq)
+contrasentido(E_seq)
+
+cat('\033[1m 6.- SARS-CoV-2 VARIANTE: KAPPA: \033[0m\n')
+get_length(K_seq)
+percentage(K_seq)
+porcentajeGC(K_seq)
+contrasentido(K_seq)
+
+cat('\033[1m 7.- SARS-CoV-2 VARIANTE: MU: \033[0m\n')
+get_length(M_seq)
+percentage(M_seq)
+porcentajeGC(M_seq)
+contrasentido(M_seq)
+
+cat('\033[1m 8.- SARS-CoV-2 VARIANTE: OMICRON: \033[0m\n')
+get_length(O_seq)
+percentage(O_seq)
+porcentajeGC(O_seq)
+contrasentido(O_seq)
+
+cat('\033[1m 9.- SARS-CoV-2 VARIANTE: TAU: \033[0m\n')
+get_length(T_seq)
+percentage(T_seq)
+porcentajeGC(T_seq)
+contrasentido(T_seq)
+
+cat('\033[1m 10.- SARS-CoV-2 VARIANTE: ZETA: \033[0m\n')
+get_length(Z_seq)
+percentage(Z_seq)
+porcentajeGC(Z_seq)
+contrasentido(Z_seq)
+}
+
+VirusGraph <- function()
+{
+  VirusDataChart = matrix(c(tablas(A_seq)[1],tablas(B_seq)[1],tablas(D_seq)[1],tablas(EP_seq)[1],tablas(E_seq)[1],tablas(K_seq)[1],tablas(M_seq)[1],tablas(O_seq)[1],tablas(T_seq)[1],tablas(Z_seq)[1],tablas(A_seq)[2],tablas(B_seq)[2],tablas(D_seq)[2],tablas(EP_seq)[2],tablas(E_seq)[2],tablas(K_seq)[2],tablas(M_seq)[2],tablas(O_seq)[2],tablas(T_seq)[2],tablas(Z_seq)[2],tablas(A_seq)[3],tablas(B_seq)[3],tablas(D_seq)[3],tablas(EP_seq)[3],tablas(E_seq)[3],tablas(K_seq)[3],tablas(M_seq)[3],tablas(O_seq)[3],tablas(T_seq)[3],tablas(Z_seq)[3],tablas(A_seq)[4],tablas(B_seq)[4],tablas(D_seq)[4],tablas(EP_seq)[4],tablas(E_seq)[4],tablas(K_seq)[4],tablas(M_seq)[4],tablas(O_seq)[4],tablas(T_seq)[4],tablas(Z_seq)[4],tablas(A_seq)[5],tablas(B_seq)[5],tablas(D_seq)[5],tablas(EP_seq)[5],tablas(E_seq)[5],tablas(K_seq)[5],tablas(M_seq)[5],tablas(O_seq)[5],tablas(T_seq)[5],tablas(Z_seq)[5]), ncol=10, byrow=TRUE)
+colnames(VirusDataChart) = c('ALPHA','BETA','DELTA','EPSILON','ETA','KAPPA','MU','OMICRON','TAU','ZETA')
+rownames(VirusDataChart) <- c('A','C','G','T','N')
+TablaVirus = as.table(VirusDataChart)
+cat("\033[1mTabla de Porcentajes de Bases de las Variantes\033[0m\n\n")
+print(TablaVirus)
+
+colores <- c("#FF4040","#B2DFEE","lightgoldenrod1","darkseagreen2","azure3")
+
+opar = par(oma = c(1.5,0,0,1.5))
+barplot(TablaVirus,
+main = "Nucleótidos Dentro de Variantes",
+col = colores,
+beside = TRUE,
+las=2,
+)
+par(opar)
+
+opar
+title(xlab = "Variante",
+ylab = "Porcentaje")
+
+opar = par(oma = c(0,0,0,0), mar = c(0,0,0,0), new = TRUE)
+legend(x = "right", legend = rownames(TablaVirus), fill = colores, bty = "n", y.intersp = 2)
+par(opar)
+}
+
+VirusGraph2 <- function()
+{
+  matriz_distancia <- dist.alignment(virus_aligned, matrix = "similarity")
+  
+  temp <- as.data.frame(as.matrix(matriz_distancia))
+  temp
+  table.paint(temp, cleg=0, clabel.row=.5, clabel.col=.5) + scale_color_viridis()
+  
+  virus_filogenetico <- nj(matriz_distancia)
+  class(virus_filogenetico)
+  
+  ggtree(virus_plot_filogenetico, color="white", size=0.2) + hexpand(0.38) + geom_tiplab(size=3,offset=0.01, color = "white", fontface=17) + theme_tree("grey30") + geom_nodepoint(color="#A596D3", size=1.5,) + geom_tippoint(color="#A5A5A5", size=1.5) + ggtitle("Árbol Filogenético Variantes SARS-CoV-2")
+}
+
+Explicaciones <- function()
+{
+  cat("\n\033[1mEXPLICACIONES GRÁFICAS\033[0m\n\tPara ver qué gráfica es cuál, referirse a Elumen.\n\n")
+  
+  cat("\033[1mExplicación Gráfica 1:\033[0m La gráfica y tabla presentadas nos muestra el desarrollo de las bases de las diversas variantes que ha tenido el virus. Nos ayuda a comprender de mejor manera cómo se han alterado las mismas, al igual que la estructura de esta. Los porcentajes presentados son aquellos que nos ayudan a entender la evolución del virus, tomando en cuenta los datos oficiales de la NCBI. El análisis de estos datos significa el progreso que estas variantes han demostrado a lo largo de los años, entendiendo sus propiedades y resistencia ante el ambiente y las vacunas creadas. Estos datos nos ayudarán a la creación de vacunas más efectivas alrededor de nuestro entorno, ya que se puede definir la estabilidad de la misma por medio de la varianza entre las bases de cada variante del SARS-CoV-2.\n")
+  
+  cat("\n\033[1mExplicación Tabla Gráfica 2:\033[0m La tabla la cual se presenta en forma HTML presenta la alineación de las 20 variantes electas para el análisis del virus SARS-CoV-2, donde se puede ver en la parte inferior donde se resaltan las particularidades dentro de las cadenas del ADN de la variante, la cual nos permite analizar la estructura de mejor manera, tanto en similitudes, teniendo los nucleótidos que se comparten en la última fila de nuestra tabla, como sus particularidades, teniendo estas representadas en el resto de la tabla. Si se ve un punto dentro de la tabla, significa que no hay un valor en esa celda, representando su similitud en dicha posición o su diferencia.\n")  
+
+cat("\n\033[1mExplicación Tabla Gráfica 3:\033[0m La tabla presenta 20 variantes del virus SARS-CoV-2, donde se compara la similitudes que comparten cada una de estas especies. Entre más alejados estén en parecerse, más cambia el color de nuestro recuadro. Entre más blanco, más similitud tiene nuestra variante, la cual nos va a ayudar a armar el árbol filogenético presentado en la gráfica 4.\n")
+
+cat("\n\033[1mExplicación Gráfica 4:\033[0m La gráfica representa las similitudes de nuestras variantes por medio de los datos obtenidos anteriormente. En nuestro árbol filogenético podemos ver las similitudes que comparten algunas cepas del virus por país. Las diferencias son notables, ya sea por país o por variante, teniendo como ejemplo la variante EPSILON, la cual se encuentra en ambos extremos de nuestra gráfica, significando que su similitud es notable. Esto nos puede responder la pregunta de \"¿Son muy diferentes las variantes entre cada país? ¿Es diferente el SARS-CoV-2 entre las diferentes poblaciones: Asiática, Hispana, Europea o Africana?\", teniendo como una respuesta el depende cómo se analice el vírus, y dónde se analice, como se representa en el siguiente árbol filogenético.\n")
+
+cat("\n\033[1mConclusión:\033[0m Aún teniendo diversas diferencias dentro de nuestras variantes, dentro de un mismo virus, podemos encontrar patrones que nos pueden llevar a un mejor análisis de las características del mismo, al menos dentro de sus bases de nucleótidos. Con ello, podemos definir diversas soluciones y métodos de estudio que nos permitan la creación de nuevas vacunas, e inclusive métodos de prevención y detección del mismo por el comportamiento dentro de la estructura, la cual nos permita romper las cadenas de ADN y ARN que el virus trae consigo.\n")
+}
+
+Citas <- function()
+{
+  cat("\n\n\033[1mBibliografía\n\n\033[0m\tVídeo\n")
+  c("\nHolmes EC, Goldstein SA, Rasmussen AL, Robertson DL, Crits-Christoph A, Wertheim JO, Anthony SJ, Barclay WS, Boni MF, Doherty PC, Farrar J, Geoghegan JL, Jiang X, Leibowitz JL, Neil SJD, Skern T, Weiss SR, Worobey M, Andersen KG, Garry RF, Rambaut A. The origins of SARS-CoV-2: A critical review. Cell. 2021 Sep 16;184(19):4848-4856. doi: 10.1016/j.cell.2021.08.017. Epub 2021 Aug 19. PMID: 34480864; PMCID: PMC8373617.\n","\nHu B, Guo H, Zhou P, Shi ZL. Characteristics of SARS-CoV-2 and COVID-19. Nat Rev Microbiol. 2021 Mar;19(3):141-154. doi: 10.1038/s41579-020-00459-7. Epub 2020 Oct 6. Erratum in: Nat Rev Microbiol. 2022 May;20(5):315. PMID: 33024307; PMCID: PMC7537588.\n","\nV'kovski P, Kratzel A, Steiner S, Stalder H, Thiel V. Coronavirus biology and replication: implications for SARS-CoV-2. Nat Rev Microbiol. 2021 Mar;19(3):155-170. doi: 10.1038/s41579-020-00468-6. Epub 2020 Oct 28. PMID: 33116300; PMCID: PMC7592455.")%>%
+  cat()
+  cat("\n\n\tCódigo\n")
+  c("seqinr","viridis","adegenet","Biostrings","ape","dplyr","purrr","ggplot2","stringr", "DECIPHER","ggtree")%>%
+  map(citation) %>%
+  print(style = "text")
+}
+```
+
+PRESENTACIÓN FINAL
+```{r}
+final <- function(){
+  DataGraph()
+  DatosAlumno()
+  VirusData()
+  VirusGraph()
+  Explicaciones()
+  Citas()
+  VirusGraph2()
+}
+
+final()
+```
+```
